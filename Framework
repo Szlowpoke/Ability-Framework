@@ -1,0 +1,46 @@
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local serverScriptService = game:GetService("ServerScriptService")
+local dataEvent = replicatedStorage.dataEvent
+local combatEvent = replicatedStorage.combatEvent
+-- 
+local abilityIndex = require(serverScriptService.abilityIndex)
+local abilities = serverScriptService.abilities
+-- 
+local function abilitySearch(name) -- Function to look through the module's dictionary to check for the abilities
+	for i, v in pairs(abilityIndex) do 
+		if v.Name == name then 
+			return i, v 
+		end
+	end
+	return nil, nil
+end
+
+local function folderSearch(folder, abilityScript) -- Recursive function, looks through folders to check for the module scripts
+	for i, v in ipairs(folder:GetChildren()) do 
+		if v:IsA("ModuleScript") and v.Name == abilityScript then 
+			return v
+		elseif v:IsA("Folder") then 
+			local result = folderSearch(v, abilityScript)
+			if result then return result end 
+		end
+	end
+	return nil 
+end
+dataEvent.OnServerEvent:Connect(function(player, abilityName)
+	local moveID, moveData = abilitySearch(abilityName)
+	if not moveID then 
+		warn("Invalid Move ID")
+	else print("Move Found") end 
+
+	local scriptModule = folderSearch(abilities, moveData.scriptName)
+	if not scriptModule then 
+		warn("Script is missing or nil value")
+	end
+	
+	local success, err = pcall(function()
+		require(scriptModule)(player)
+	end)
+	if not success then 
+		warn("Ability Failed", moveData.scriptName, err)
+	end
+end)
